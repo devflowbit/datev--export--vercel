@@ -109,6 +109,7 @@ export class DatevValidatorService {
       const isCreditNote = datevDoc.documentDirection === 'creditNote';
 
       datevDoc.lineItems.forEach((line, idx) => {
+        console.log("Line item", line);
         const buKeyValid = validateBUKeyVATRate(line.buKey, line.vatRate);
 
         // Skip BU Key validation for credit notes (they may have foreign VAT rates)
