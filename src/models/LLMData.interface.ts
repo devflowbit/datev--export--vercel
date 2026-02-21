@@ -110,6 +110,7 @@ export interface LineItemData {
   vatAmount?: LLMField<number>;
   Sachkonto?: LLMField<string>;
   BUSchluessel?: LLMField<string>;
+  buKey?: LLMField<string>;
   discount?: LLMField<number>;
   // Extended line item fields (all optional)
   bookingText?: LLMField<string>;
