@@ -583,12 +583,12 @@ export class DatevXMLGeneratorService {
         // Order 14-21: Party, VAT & Shipping
         // { order: 14, element: 'typeOfReceivable', value: item.typeOfReceivable },
         { order: 15, element: 'ownVatId', value: ownVatId },
-        { order: 16, element: 'shipFromCountry', value: supplier?.country },
+        // { order: 16, element: 'shipFromCountry', value: supplier?.country },
         // { order: 17, element: 'partyId', value: (supplier?.vendorPartyNumber || bpAccountNo).replace(/[^a-zA-Z0-9]/g, "") }, // Use internalId for outgoing
         { order: 18, element: 'paidAt', value: isAlreadyPaid ? paidAt : null },
         // { order: 19, element: 'internalInvoiceId', value: item.internalInvoiceId },
         { order: 20, element: 'vatId', value: supplier?.vatId }, // NO discount condition!
-        { order: 21, element: 'shipToCountry', value: shipToCountry },
+        // { order: 21, element: 'shipToCountry', value: shipToCountry },
 
         // Order 22-27: Banking & Exchange
         // NOTE: bankCode, bankAccount, bankCountry are LEGACY fields (pre-IBAN)
@@ -623,8 +623,8 @@ export class DatevXMLGeneratorService {
         // Order 40-41: Party fields - CONDITIONAL based on document direction
         // Incoming: supplierName/supplierCity (vendor is supplier)
         // Outgoing: customerName/customerCity (vendor becomes customer in XML)
-        { order: 40, element: partyNameField, value: supplier?.name },
-        { order: 41, element: partyCityField, value: supplier?.city }
+        // { order: 40, element: partyNameField, value: supplier?.name },
+        // { order: 41, element: partyCityField, value: supplier?.city }
       ];
 
       // Filter out fields with undefined/null/empty values
