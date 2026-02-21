@@ -44,6 +44,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Parse request body (already parsed by Vercel)
     const requestBody = req.body as any;
 
+    logger.log("Incoming request", JSON.stringify(requestBody));
+
     // Stage 0: Basic input validation (flexible - no strict schema)
     if (!requestBody) {
       const formattedErrors = errorFormatter.formatErrors(['Document data missing from request']);
