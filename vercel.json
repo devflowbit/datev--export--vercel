@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/datev-export.ts": {
+      "maxDuration": 120
+    }
+  }
+}
