@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LedgerImport xmlns="http://xml.datev.de/bedi/tps/ledger/v060"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://xml.datev.de/bedi/tps/ledger/v060 Belegverwaltung_online_ledger_import_v060.xsd"
+              version="6.0"
+              generator_info="{{GENERATOR_INFO}}"
+              generating_system="{{GENERATING_SYSTEM}}"
+              xml_data="Kopie nur zur Verbuchung berechtigt nicht zum Vorsteuerabzug">
+  <consolidate consolidatedAmount="{{GROSS_AMOUNT}}"
+               consolidatedDate="{{DOCUMENT_DATE}}"
+               consolidatedInvoiceId="{{DOCUMENT_NUMBER}}"
+               consolidatedCurrencyCode="{{CURRENCY}}"{{#if SERVICE_DATE}}
+               consolidatedDeliveryDate="{{SERVICE_DATE}}"{{/if}}>
+{{LINE_ITEMS_XML}}
+  </consolidate>
+</LedgerImport>
