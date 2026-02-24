@@ -546,9 +546,31 @@ export class DatevXMLGeneratorService {
     const partyCityField = effectiveDirection === 'incoming' ? 'supplierCity' : 'customerCity';
 
     // Get booking text prefix based on direction
-    // Generate one ledger element per line item
-    // Filter items to remove the items with 0 amount
-    const ledgerElements = lineItems.filter((item) => item.lineNetAmount !== 0).map(item => {
+    // Generate one ledger element per unique tax rate
+    // Filter items to remove the items with 0 amount, then consolidate by vatRate
+    const filteredItems = lineItems.filter((item) => item.lineNetAmount !== 0);
+
+    // Consolidate line items by unique vatRate
+    const vatRateGroups = new Map<number, LineItem[]>();
+    for (const item of filteredItems) {
+      const rate = item.vatRate;
+      if (!vatRateGroups.has(rate)) {
+        vatRateGroups.set(rate, []);
+      }
+      vatRateGroups.get(rate)!.push(item);
+    }
+
+    const consolidatedItems: LineItem[] = Array.from(vatRateGroups.values()).map(group => {
+      const first = group[0];
+      return {
+        ...first,
+        lineNetAmount: group.reduce((sum, i) => sum + i.lineNetAmount, 0),
+        lineTaxAmount: group.reduce((sum, i) => sum + (i.lineTaxAmount || 0), 0),
+        lineGrossAmount: group.reduce((sum, i) => sum + (i.lineGrossAmount || (i.lineNetAmount + (i.lineTaxAmount || 0))), 0),
+      };
+    });
+
+    const ledgerElements = consolidatedItems.map(item => {
       const lineGross = item.lineGrossAmount || (item.lineNetAmount + (item.lineTaxAmount || 0));
 
       // Use line-specific deliveryDate if present
