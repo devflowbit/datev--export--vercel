@@ -243,6 +243,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Stage 5: Create ZIP package (with Ledger XML + document.xml manifest)
     logger.log('Stage 5: Creating DATEV ZIP package');
+    const projectKuerzel = exportRequest.llmData.project?.value?.projectNumber?.value;
     const zipPackager = new DatevZipPackagerService();
     const zipResult = await zipPackager.createZipPackage(
       datevDocument.documentNumber,
@@ -252,7 +253,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       datevDocument.documentDate,
       datevDocument.documentDirection,
       datevDocument.supplier?.name,
-      datevDocument.orderId
+      projectKuerzel
     );
 
     if (!zipResult.success || !zipResult.zipBase64) {
