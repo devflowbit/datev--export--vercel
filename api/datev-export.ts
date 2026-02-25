@@ -250,7 +250,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       pdfResult.pdfBuffer,
       datevDocument.documentGuid!,
       datevDocument.documentDate,
-      datevDocument.documentDirection
+      datevDocument.documentDirection,
+      datevDocument.supplier?.name,
+      datevDocument.orderId
     );
 
     if (!zipResult.success || !zipResult.zipBase64) {

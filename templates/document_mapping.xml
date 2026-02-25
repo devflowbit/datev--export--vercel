@@ -8,6 +8,7 @@
     <document{{#if DOCUMENT_GUID}} guid="{{DOCUMENT_GUID}}" type="1"{{/if}}>
 <extension xsi:type="{{LEDGER_TYPE}}" datafile="{{XML_FILENAME}}">
       <property value="{{INVOICE_MONTH}}" key="1"/>
+      <property value="{{ABLAGEORT}}" key="2"/>
       <property value="{{DOCUMENT_TYPE_TEXT}}" key="3"/>
     </extension>
     <extension xsi:type="File" name="{{PDF_FILENAME}}"/>

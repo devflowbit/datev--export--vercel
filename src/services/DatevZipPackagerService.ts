@@ -24,8 +24,36 @@ export class DatevZipPackagerService {
   }
 
   /**
+   * Build base filename from project kürzel, vendor name, and document date.
+   * Format: {projectKuerzel}_{vendorName}_{dd.mm.yyyy}
+   * Falls back to invoice number if neither project nor vendor is available.
+   */
+  private buildBaseFilename(invoiceNumber: string, documentDate: string, vendorName?: string, projectKuerzel?: string): string {
+    // Format date as dd.mm.yyyy
+    const date = new Date(documentDate);
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    const formattedDate = `${day}.${month}.${year}`;
+
+    // Build parts: [projectKuerzel, vendorName, dd.mm.yyyy]
+    const parts: string[] = [];
+    if (projectKuerzel) parts.push(projectKuerzel);
+    if (vendorName) parts.push(vendorName);
+    parts.push(formattedDate);
+
+    // If we have at least vendor or project, use the new format
+    if (projectKuerzel || vendorName) {
+      return this.sanitizeFilename(parts.join('_'));
+    }
+
+    // Fallback to invoice number
+    return this.sanitizeFilename(invoiceNumber);
+  }
+
+  /**
    * Create DATEV-compliant ZIP package
-   * Contains: invoice_{number}.pdf, invoice_{number}.xml, document.xml
+   * Contains: {name}.pdf, {name}.xml, document.xml
    */
   public async createZipPackage(
     invoiceNumber: string,
@@ -33,14 +61,16 @@ export class DatevZipPackagerService {
     pdfBuffer: Buffer,
     documentGuid: string,
     documentDate: string,
-    documentDirection: 'incoming' | 'outgoing' | 'creditNote' = 'incoming' // Support credit notes
+    documentDirection: 'incoming' | 'outgoing' | 'creditNote' = 'incoming',
+    vendorName?: string,
+    projectKuerzel?: string
   ): Promise<ZipPackageResult> {
     try {
-      // Generate filenames
-      const sanitizedInvoiceNumber = this.sanitizeFilename(invoiceNumber);
-      const pdfFilename = `invoice_${sanitizedInvoiceNumber}.pdf`;
-      const xmlFilename = `invoice_${sanitizedInvoiceNumber}.xml`;
-      const zipFilename = `datev_export_${sanitizedInvoiceNumber}.zip`;
+      // Generate filenames using project kürzel + vendor name + date
+      const baseName = this.buildBaseFilename(invoiceNumber, documentDate, vendorName, projectKuerzel);
+      const pdfFilename = `${baseName}.pdf`;
+      const xmlFilename = `${baseName}.xml`;
+      const zipFilename = `${baseName}.zip`;
 
       // Create ZIP instance
       const zip = new JSZip();
@@ -58,9 +88,10 @@ export class DatevZipPackagerService {
         pdfFilename,
         xmlFilename,
         documentGuid,
-        documentDate, // Pass document date for invoice month calculation
-        documentDirection, // Pass document direction for Rechnungseingang/Rechnungsausgang
-        DATEV_CONFIG.generatingSystem
+        documentDate,
+        documentDirection,
+        DATEV_CONFIG.generatingSystem,
+        projectKuerzel
       );
 
       zip.file('document.xml', documentMappingXml, {
