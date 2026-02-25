@@ -95,7 +95,7 @@ export const DATEV_CONFIG: DatevAppConfig = {
 
   // Webhook Configuration
   webhook: {
-    timeoutMs: parseInt(process.env.WEBHOOK_TIMEOUT_MS || '30000', 10),
+    timeoutMs: parseInt(process.env.WEBHOOK_TIMEOUT_MS || '60000', 10),
     maxRetries: parseInt(process.env.WEBHOOK_MAX_RETRIES || '3', 10),
     allowHttp: process.env.WEBHOOK_ALLOW_HTTP === 'true',
     apiKey: process.env.API_KEY || '', // API key for x-api-key header in webhook requests
