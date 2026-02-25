@@ -26,7 +26,7 @@ export class DatevZipPackagerService {
   /**
    * Build base filename from project kürzel, vendor name, and document date.
    * Format: {projectKuerzel}_{vendorName}_{dd.mm.yyyy}
-   * Falls back to invoice number if neither project nor vendor is available.
+   * Uses "Allgemein" as prefix when no project kürzel is available.
    */
   private buildBaseFilename(invoiceNumber: string, documentDate: string, vendorName?: string, projectKuerzel?: string): string {
     // Format date as dd.mm.yyyy
@@ -36,19 +36,15 @@ export class DatevZipPackagerService {
     const year = date.getFullYear();
     const formattedDate = `${day}.${month}.${year}`;
 
-    // Build parts: [projectKuerzel, vendorName, dd.mm.yyyy]
-    const parts: string[] = [];
-    if (projectKuerzel) parts.push(projectKuerzel);
+    // Use project kürzel or "Allgemein" as prefix
+    const prefix = projectKuerzel || 'Allgemein';
+
+    // Build parts: [prefix, vendorName, dd.mm.yyyy]
+    const parts: string[] = [prefix];
     if (vendorName) parts.push(vendorName);
     parts.push(formattedDate);
 
-    // If we have at least vendor or project, use the new format
-    if (projectKuerzel || vendorName) {
-      return this.sanitizeFilename(parts.join('_'));
-    }
-
-    // Fallback to invoice number
-    return this.sanitizeFilename(invoiceNumber);
+    return this.sanitizeFilename(parts.join('_'));
   }
 
   /**

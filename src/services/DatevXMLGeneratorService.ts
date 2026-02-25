@@ -715,10 +715,8 @@ export class DatevXMLGeneratorService {
     const effectiveDirection = documentDirection === 'creditNote' ? 'incoming' : documentDirection;
     const ledgerType = effectiveDirection === 'outgoing' ? 'accountsReceivableLedger' : 'accountsPayableLedger';
 
-    // Determine Ablageort (filing location) based on project kürzel
-    const ablageort = projectKuerzel
-      ? `Belegführung > ${projectKuerzel}`
-      : 'Belegführung > Allgemein';
+    // Determine repository level 2 name based on project kürzel
+    const repositoryLevelName = projectKuerzel || 'Allgemein';
 
     const placeholders = {
       GENERATING_SYSTEM: generatingSystem || DATEV_CONFIG.generatingSystem,
@@ -727,7 +725,7 @@ export class DatevXMLGeneratorService {
       XML_FILENAME: xmlFilename,
       PDF_FILENAME: pdfFilename,
       INVOICE_MONTH: invoiceMonth,
-      ABLAGEORT: ablageort,
+      REPOSITORY_LEVEL_NAME: repositoryLevelName,
       DOCUMENT_TYPE_TEXT: documentTypeText,
       LEDGER_TYPE: ledgerType
     };
