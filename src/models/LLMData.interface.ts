@@ -134,6 +134,10 @@ export interface LineItemsValue {
   };
 }
 
+export interface ProjectValue {
+  projectNumber?: LLMField<string>;
+}
+
 export interface LLMDataInput {
   documentDirection?: 'incoming' | 'outgoing' | 'creditNote'; // Direction of invoice: incoming (purchase), outgoing (sales), or creditNote
   invoice?: LLMSection<InvoiceValue>;
@@ -142,6 +146,7 @@ export interface LLMDataInput {
   payment?: LLMSection<PaymentValue>;
   summary?: LLMSection<SummaryValue>;
   lineItems?: LLMSection<LineItemsValue>;
+  project?: LLMSection<ProjectValue>;
   metadata?: LLMSection<any>;
 }
 

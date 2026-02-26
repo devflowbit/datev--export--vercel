@@ -11,6 +11,10 @@
       <property value="{{DOCUMENT_TYPE_TEXT}}" key="3"/>
     </extension>
     <extension xsi:type="File" name="{{PDF_FILENAME}}"/>
+    <repository>
+      <level id="1" name="Belegführung"/>
+      <level id="2" name="{{REPOSITORY_LEVEL_NAME}}"/>
+    </repository>
   </document>
 </content>
 </archive>
