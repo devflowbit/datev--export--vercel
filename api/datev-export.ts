@@ -21,6 +21,8 @@ import { LLMDataInput, DatevExportRequest, WebhookPayload } from '../src/models/
 import { DatevExportResult, DatevDocument } from '../src/models/DatevDocument.interface';
 import { DATEV_CONFIG, isTestMode } from '../src/config/datevConfig';
 import { randomUUID } from 'crypto';
+import { writeFileSync } from 'fs';
+import { join } from 'path';
 
 // Initialize error formatter (German by default)
 const errorFormatter = new ErrorFormatterService('de');
@@ -288,6 +290,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     logger.log(`ZIP created: ${zipResult.filename}, files: ${zipResult.filesIncluded?.join(', ')}`);
+
+    // DEBUG: Write zip to disk for inspection
+    /*const debugZipPath = join(process.cwd(), 'debug-output', zipResult.filename || 'debug-export.zip');
+    try {
+      const { mkdirSync } = require('fs');
+      mkdirSync(join(process.cwd(), 'debug-output'), { recursive: true });
+      writeFileSync(debugZipPath, Buffer.from(zipResult.zipBase64!, 'base64'));
+      logger.log(`[DEBUG] ZIP written to: ${debugZipPath}`);
+    } catch (debugErr) {
+      logger.warn(`[DEBUG] Failed to write debug ZIP: ${debugErr}`);
+    }*/
 
     // Prepare metadata
     const metadata = {

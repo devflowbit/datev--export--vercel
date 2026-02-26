@@ -645,7 +645,7 @@ export class DatevXMLGeneratorService {
         // Order 40-41: Party fields - CONDITIONAL based on document direction
         // Incoming: supplierName/supplierCity (vendor is supplier)
         // Outgoing: customerName/customerCity (vendor becomes customer in XML)
-        // { order: 40, element: partyNameField, value: supplier?.name },
+        { order: 40, element: partyNameField, value: supplier?.name },
         // { order: 41, element: partyCityField, value: supplier?.city }
       ];
 
