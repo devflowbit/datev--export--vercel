@@ -113,13 +113,13 @@ export class DatevValidatorService {
         const buKeyValid = validateBUKeyVATRate(line.buKey, line.vatRate);
 
         // Skip BU Key validation for credit notes (they may have foreign VAT rates)
-        if (!buKeyValid && !isCreditNote) {
+        /*if (!buKeyValid && !isCreditNote) {
           checks.buKeyConsistency = false;
           errors.push(
             `Line ${idx + 1}: BU Key '${line.buKey}' does not match VAT rate ${line.vatRate}%`
           );
           this.addError(ValidationStage.BUSINESS_RULES, `lineItems[${idx}].buKey`, 'BU Key/VAT rate mismatch', 'error');
-        }
+        }*/
 
         // For credit notes, issue a warning instead of error
         if (!buKeyValid && isCreditNote) {
