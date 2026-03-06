@@ -385,7 +385,7 @@ export class DatevParserService {
       const vatRate = this.extractFieldValue(item.vatRate);
       const vatAmount = this.extractFieldValue(item.vatAmount);
       const sachkonto = this.extractFieldValue(item.Sachkonto);
-      const buKey = this.extractFieldValue(item.BUSchluessel);
+      const buKey = this.extractFieldValue(item.buKey);
 
       // Extract extended line item fields (all optional)
       const bookingText = this.extractFieldValue(item.bookingText);

@@ -21,6 +21,8 @@ import { LLMDataInput, DatevExportRequest, WebhookPayload } from '../src/models/
 import { DatevExportResult, DatevDocument } from '../src/models/DatevDocument.interface';
 import { DATEV_CONFIG, isTestMode } from '../src/config/datevConfig';
 import { randomUUID } from 'crypto';
+import { writeFileSync } from 'fs';
+import { join } from 'path';
 
 // Initialize error formatter (German by default)
 const errorFormatter = new ErrorFormatterService('de');
@@ -43,6 +45,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     // Parse request body (already parsed by Vercel)
     const requestBody = req.body as any;
+
+    logger.log("Incoming request", JSON.stringify(requestBody));
 
     // Stage 0: Basic input validation (flexible - no strict schema)
     if (!requestBody) {
@@ -241,6 +245,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Stage 5: Create ZIP package (with Ledger XML + document.xml manifest)
     logger.log('Stage 5: Creating DATEV ZIP package');
+    const projectKuerzel = exportRequest.llmData.project?.value?.projectNumber?.value;
     const zipPackager = new DatevZipPackagerService();
     const zipResult = await zipPackager.createZipPackage(
       datevDocument.documentNumber,
@@ -248,7 +253,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       pdfResult.pdfBuffer,
       datevDocument.documentGuid!,
       datevDocument.documentDate,
-      datevDocument.documentDirection
+      datevDocument.documentDirection,
+      datevDocument.supplier?.name,
+      projectKuerzel
     );
 
     if (!zipResult.success || !zipResult.zipBase64) {
@@ -283,6 +290,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     logger.log(`ZIP created: ${zipResult.filename}, files: ${zipResult.filesIncluded?.join(', ')}`);
+
+    // DEBUG: Write zip to disk for inspection
+    /*const debugZipPath = join(process.cwd(), 'debug-output', zipResult.filename || 'debug-export.zip');
+    try {
+      const { mkdirSync } = require('fs');
+      mkdirSync(join(process.cwd(), 'debug-output'), { recursive: true });
+      writeFileSync(debugZipPath, Buffer.from(zipResult.zipBase64!, 'base64'));
+      logger.log(`[DEBUG] ZIP written to: ${debugZipPath}`);
+    } catch (debugErr) {
+      logger.warn(`[DEBUG] Failed to write debug ZIP: ${debugErr}`);
+    }*/
 
     // Prepare metadata
     const metadata = {
