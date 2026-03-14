@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<archive xmlns="http://xml.datev.de/bedi/tps/document/v05.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://xml.datev.de/bedi/tps/document/v05.0 Document_v050.xsd"
+         version="5.0"
+         generatingSystem="{{GENERATING_SYSTEM}}">
+  <header>
+    <date>{{EXPORT_DATE}}</date>
+    <description>DATEV Invoice Export</description>
+    {{#if ADVISOR_NUMBER}}<advisorNumber>{{ADVISOR_NUMBER}}</advisorNumber>{{/if}}
+    {{#if CLIENT_NUMBER}}<clientNumber>{{CLIENT_NUMBER}}</clientNumber>{{/if}}
+  </header>
+  <content>
+    <document guid="{{DOCUMENT_GUID}}">
+      <processKind>Rechnungsdokument</processKind>
+      <type>{{DOCUMENT_TYPE}}</type>
+      <baseinfo>
+        <documentNumber>{{DOCUMENT_NUMBER}}</documentNumber>
+        <documentDate>{{DOCUMENT_DATE}}</documentDate>
+        {{#if SERVICE_DATE}}<serviceDate>{{SERVICE_DATE}}</serviceDate>{{/if}}
+        {{#if DUE_DATE}}<dueDate>{{DUE_DATE}}</dueDate>{{/if}}
+        <currency>{{CURRENCY}}</currency>
+        {{#if EXCHANGE_RATE}}<exchangeRate>{{EXCHANGE_RATE}}</exchangeRate>{{/if}}
+      </baseinfo>
+      <parties>
+        <party role="vendor">
+          <name>{{VENDOR_NAME}}</name>
+          {{#if VENDOR_INTERNAL_ID}}<internalId>{{VENDOR_INTERNAL_ID}}</internalId>{{/if}}
+          <address>
+            <street>{{VENDOR_STREET}}</street>
+            <postalCode>{{VENDOR_POSTAL_CODE}}</postalCode>
+            <city>{{VENDOR_CITY}}</city>
+            <country>{{VENDOR_COUNTRY}}</country>
+          </address>
+          {{#if VENDOR_VAT_ID}}<vatId>{{VENDOR_VAT_ID}}</vatId>{{/if}}
+          {{#if VENDOR_GERMAN_TAX_NUMBER}}<germanTaxNumber>{{VENDOR_GERMAN_TAX_NUMBER}}</germanTaxNumber>{{/if}}
+          {{#if VENDOR_EMAIL}}<email>{{VENDOR_EMAIL}}</email>{{/if}}
+          {{#if VENDOR_PHONE}}<phone>{{VENDOR_PHONE}}</phone>{{/if}}
+          {{#if VENDOR_IBAN}}<iban>{{VENDOR_IBAN}}</iban>{{/if}}
+          {{#if VENDOR_BIC}}<bic>{{VENDOR_BIC}}</bic>{{/if}}
+        </party>
+        {{#if CUSTOMER_VAT_ID}}
+        <party role="customer">
+          <vatId>{{CUSTOMER_VAT_ID}}</vatId>
+        </party>
+        {{/if}}
+      </parties>
+      <lineItems>
+        {{LINE_ITEMS_XML}}
+      </lineItems>
+      <summary>
+        <netAmount>{{NET_AMOUNT}}</netAmount>
+        <taxAmount>{{TAX_AMOUNT}}</taxAmount>
+        <grossAmount>{{GROSS_AMOUNT}}</grossAmount>
+      </summary>
+      <vat>
+        <vatCase>{{VAT_CASE}}</vatCase>
+        <taxRate>{{TAX_RATE}}</taxRate>
+        {{#if REVERSE_CHARGE_NOTE}}<reverseChargeNote>{{REVERSE_CHARGE_NOTE}}</reverseChargeNote>{{/if}}
+        {{#if INTRA_EU_NOTE}}<intraEUNote>{{INTRA_EU_NOTE}}</intraEUNote>{{/if}}
+      </vat>
+      {{#if PAYMENT_DATA}}
+      <payment>
+        {{#if BANK_ACCOUNT}}<bankAccount>{{BANK_ACCOUNT}}</bankAccount>{{/if}}
+        {{#if IBAN}}<iban>{{IBAN}}</iban>{{/if}}
+        {{#if PAYMENT_TERMS_TEXT}}<paymentTermsText>{{PAYMENT_TERMS_TEXT}}</paymentTermsText>{{/if}}
+        {{#if PAYMENT_METHOD}}<paymentMethod>{{PAYMENT_METHOD}}</paymentMethod>{{/if}}
+      </payment>
+      {{/if}}
+      <booking>
+        <creditorAccount>{{CREDITOR_ACCOUNT}}</creditorAccount>
+        <offsetAccount>{{OFFSET_ACCOUNT}}</offsetAccount>
+        {{#if OPOS_FLAG}}<oposFlag>{{OPOS_FLAG}}</oposFlag>{{/if}}
+      </booking>
+      <references>
+        <externalReference>{{EXTERNAL_REFERENCE}}</externalReference>
+        {{#if PURCHASE_ORDER_NUMBER}}<purchaseOrderNumber>{{PURCHASE_ORDER_NUMBER}}</purchaseOrderNumber>{{/if}}
+        {{#if DELIVERY_NOTE_NUMBER}}<deliveryNoteNumber>{{DELIVERY_NOTE_NUMBER}}</deliveryNoteNumber>{{/if}}
+        {{#if DOCUMENT_FIELD_1}}<documentField1>{{DOCUMENT_FIELD_1}}</documentField1>{{/if}}
+        {{#if DOCUMENT_FIELD_2}}<documentField2>{{DOCUMENT_FIELD_2}}</documentField2>{{/if}}
+      </references>
+      {{#if INTERNATIONAL_SECTION}}
+      <international>
+        <intraEUGoodsAcquisition>{{INTRA_EU_GOODS}}</intraEUGoodsAcquisition>
+        <euServiceReverseCharge>{{EU_SERVICE_RC}}</euServiceReverseCharge>
+        <nonEUImport>{{NON_EU_IMPORT}}</nonEUImport>
+      </international>
+      {{/if}}
+      {{#if INTERNAL_NOTE}}
+      <notes>
+        <internalNote>{{INTERNAL_NOTE}}</internalNote>
+      </notes>
+      {{/if}}
+    </document>
+  </content>
+</archive>
