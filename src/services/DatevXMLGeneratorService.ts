@@ -546,9 +546,31 @@ export class DatevXMLGeneratorService {
     const partyCityField = effectiveDirection === 'incoming' ? 'supplierCity' : 'customerCity';
 
     // Get booking text prefix based on direction
-    // Generate one ledger element per line item
-    // Filter items to remove the items with 0 amount
-    const ledgerElements = lineItems.filter((item) => item.lineNetAmount !== 0).map(item => {
+    // Generate one ledger element per unique tax rate
+    // Filter items to remove the items with 0 amount, then consolidate by vatRate
+    const filteredItems = lineItems.filter((item) => item.lineNetAmount !== 0);
+
+    // Consolidate line items by unique vatRate
+    const vatRateGroups = new Map<number, LineItem[]>();
+    for (const item of filteredItems) {
+      const rate = item.vatRate;
+      if (!vatRateGroups.has(rate)) {
+        vatRateGroups.set(rate, []);
+      }
+      vatRateGroups.get(rate)!.push(item);
+    }
+
+    const consolidatedItems: LineItem[] = Array.from(vatRateGroups.values()).map(group => {
+      const first = group[0];
+      return {
+        ...first,
+        lineNetAmount: group.reduce((sum, i) => sum + i.lineNetAmount, 0),
+        lineTaxAmount: group.reduce((sum, i) => sum + (i.lineTaxAmount || 0), 0),
+        lineGrossAmount: group.reduce((sum, i) => sum + (i.lineGrossAmount || (i.lineNetAmount + (i.lineTaxAmount || 0))), 0),
+      };
+    });
+
+    const ledgerElements = consolidatedItems.map(item => {
       const lineGross = item.lineGrossAmount || (item.lineNetAmount + (item.lineTaxAmount || 0));
 
       // Use line-specific deliveryDate if present
@@ -583,12 +605,12 @@ export class DatevXMLGeneratorService {
         // Order 14-21: Party, VAT & Shipping
         // { order: 14, element: 'typeOfReceivable', value: item.typeOfReceivable },
         { order: 15, element: 'ownVatId', value: ownVatId },
-        { order: 16, element: 'shipFromCountry', value: supplier?.country },
+        // { order: 16, element: 'shipFromCountry', value: supplier?.country },
         // { order: 17, element: 'partyId', value: (supplier?.vendorPartyNumber || bpAccountNo).replace(/[^a-zA-Z0-9]/g, "") }, // Use internalId for outgoing
         { order: 18, element: 'paidAt', value: isAlreadyPaid ? paidAt : null },
         // { order: 19, element: 'internalInvoiceId', value: item.internalInvoiceId },
         { order: 20, element: 'vatId', value: supplier?.vatId }, // NO discount condition!
-        { order: 21, element: 'shipToCountry', value: shipToCountry },
+        // { order: 21, element: 'shipToCountry', value: shipToCountry },
 
         // Order 22-27: Banking & Exchange
         // NOTE: bankCode, bankAccount, bankCountry are LEGACY fields (pre-IBAN)
@@ -624,7 +646,7 @@ export class DatevXMLGeneratorService {
         // Incoming: supplierName/supplierCity (vendor is supplier)
         // Outgoing: customerName/customerCity (vendor becomes customer in XML)
         { order: 40, element: partyNameField, value: supplier?.name },
-        { order: 41, element: partyCityField, value: supplier?.city }
+        // { order: 41, element: partyCityField, value: supplier?.city }
       ];
 
       // Filter out fields with undefined/null/empty values
@@ -662,7 +684,8 @@ export class DatevXMLGeneratorService {
     documentGuid: string,
     documentDate: string,
     documentDirection: 'incoming' | 'outgoing' | 'creditNote',
-    generatingSystem?: string
+    generatingSystem?: string,
+    projectKuerzel?: string
   ): string {
     const template = this.loadTemplate('document_mapping.xml');
 
@@ -692,6 +715,9 @@ export class DatevXMLGeneratorService {
     const effectiveDirection = documentDirection === 'creditNote' ? 'incoming' : documentDirection;
     const ledgerType = effectiveDirection === 'outgoing' ? 'accountsReceivableLedger' : 'accountsPayableLedger';
 
+    // Determine repository level 2 name based on project kürzel
+    const repositoryLevelName = projectKuerzel || 'Allgemein';
+
     const placeholders = {
       GENERATING_SYSTEM: generatingSystem || DATEV_CONFIG.generatingSystem,
       EXPORT_DATE: formatDateTimeForDatev(),
@@ -699,6 +725,7 @@ export class DatevXMLGeneratorService {
       XML_FILENAME: xmlFilename,
       PDF_FILENAME: pdfFilename,
       INVOICE_MONTH: invoiceMonth,
+      REPOSITORY_LEVEL_NAME: repositoryLevelName,
       DOCUMENT_TYPE_TEXT: documentTypeText,
       LEDGER_TYPE: ledgerType
     };

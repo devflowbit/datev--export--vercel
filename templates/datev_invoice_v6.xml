@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<archive xmlns="http://xml.datev.de/bedi/tps/document/v06.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://xml.datev.de/bedi/tps/document/v06.0 Document_v060.xsd"
+         version="6.0"
+         generatingSystem="{{GENERATING_SYSTEM}}"
+         generatingSystemVersion="{{SYSTEM_VERSION}}">
+  <header>
+    <date>{{EXPORT_DATE}}</date>
+    <description>DATEV Invoice Export</description>
+    <economicYear>{{FISCAL_YEAR}}</economicYear>
+    <dateFrom>{{PERIOD_START}}</dateFrom>
+    <dateTo>{{PERIOD_END}}</dateTo>
+    <advisorNumber>{{ADVISOR_NUMBER}}</advisorNumber>
+    <clientNumber>{{CLIENT_NUMBER}}</clientNumber>
+    {{#if CLIENT_ID}}<clientID>{{CLIENT_ID}}</clientID>{{/if}}
+    {{#if CONSULTANT_NUMBER}}<consultantNumber>{{CONSULTANT_NUMBER}}</consultantNumber>{{/if}}
+    <fiscalYearBegin>{{FISCAL_YEAR_START}}</fiscalYearBegin>
+    <recordCount>{{RECORD_COUNT}}</recordCount>
+  </header>
+  <content>
+    <document guid="{{DOCUMENT_GUID}}">
+      <extension>xml</extension>
+      <processKind>Rechnungsdokument</processKind>
+      <type>{{DOCUMENT_TYPE}}</type>
+      {{#if DOCUMENT_CATEGORY}}<documentCategory>{{DOCUMENT_CATEGORY}}</documentCategory>{{/if}}
+      <baseinfo>
+        <documentNumber>{{DOCUMENT_NUMBER}}</documentNumber>
+        <documentDate>{{DOCUMENT_DATE}}</documentDate>
+        <documentType>{{INVOICE_TYPE_CODE}}</documentType>
+        {{#if SERVICE_DATE}}<deliveryDate>{{SERVICE_DATE}}</deliveryDate>{{/if}}
+        {{#if DUE_DATE}}<dueDate>{{DUE_DATE}}</dueDate>{{/if}}
+        <currency>{{CURRENCY}}</currency>
+        {{#if EXCHANGE_RATE}}<exchangeRate>{{EXCHANGE_RATE}}</exchangeRate>{{/if}}
+        {{#if BUSINESS_AREA}}<businessArea>{{BUSINESS_AREA}}</businessArea>{{/if}}
+      </baseinfo>
+      <parties>
+        <party role="vendor">
+          <accountNumber>{{VENDOR_ACCOUNT_NUMBER}}</accountNumber>
+          {{#if VENDOR_BP_ACCOUNT}}<bpAccountNo>{{VENDOR_BP_ACCOUNT}}</bpAccountNo>{{/if}}
+          <name>
+            <name1>{{VENDOR_NAME}}</name1>
+            {{#if VENDOR_NAME_2}}<name2>{{VENDOR_NAME_2}}</name2>{{/if}}
+          </name>
+          {{#if VENDOR_INTERNAL_ID}}<internalId>{{VENDOR_INTERNAL_ID}}</internalId>{{/if}}
+          <address addressType="0">
+            <street>{{VENDOR_STREET}}</street>
+            <postalCode>{{VENDOR_POSTAL_CODE}}</postalCode>
+            <city>{{VENDOR_CITY}}</city>
+            <country>{{VENDOR_COUNTRY}}</country>
+          </address>
+          {{#if VENDOR_VAT_ID}}<vatId>{{VENDOR_VAT_ID}}</vatId>{{/if}}
+          {{#if VENDOR_TAX_NUMBER}}<taxNumber>{{VENDOR_TAX_NUMBER}}</taxNumber>{{/if}}
+          {{#if VENDOR_GERMAN_TAX_NUMBER}}<germanTaxNumber>{{VENDOR_GERMAN_TAX_NUMBER}}</germanTaxNumber>{{/if}}
+          {{#if VENDOR_EMAIL}}<email>{{VENDOR_EMAIL}}</email>{{/if}}
+          {{#if VENDOR_PHONE}}<phone>{{VENDOR_PHONE}}</phone>{{/if}}
+          {{#if VENDOR_IBAN}}<iban>{{VENDOR_IBAN}}</iban>{{/if}}
+          {{#if VENDOR_BIC}}<bic>{{VENDOR_BIC}}</bic>{{/if}}
+        </party>
+        <party role="customer">
+          <accountNumber>{{CUSTOMER_ACCOUNT_NUMBER}}</accountNumber>
+          {{#if CUSTOMER_BP_ACCOUNT}}<bpAccountNo>{{CUSTOMER_BP_ACCOUNT}}</bpAccountNo>{{/if}}
+          <name>
+            <name1>{{CUSTOMER_NAME}}</name1>
+            {{#if CUSTOMER_NAME_2}}<name2>{{CUSTOMER_NAME_2}}</name2>{{/if}}
+          </name>
+          {{#if CUSTOMER_VAT_ID}}<vatId>{{CUSTOMER_VAT_ID}}</vatId>{{/if}}
+          {{#if CUSTOMER_ADDRESS}}
+          <address addressType="0">
+            <street>{{CUSTOMER_STREET}}</street>
+            <postalCode>{{CUSTOMER_POSTAL_CODE}}</postalCode>
+            <city>{{CUSTOMER_CITY}}</city>
+            <country>{{CUSTOMER_COUNTRY}}</country>
+          </address>
+          {{/if}}
+        </party>
+      </parties>
+      <lineItems>
+        {{LINE_ITEMS_XML}}
+      </lineItems>
+      <summary>
+        <netAmount>{{NET_AMOUNT}}</netAmount>
+        <taxAmount>{{TAX_AMOUNT}}</taxAmount>
+        <grossAmount>{{GROSS_AMOUNT}}</grossAmount>
+      </summary>
+      {{#if HAS_TAX_LINES}}
+      <taxLines>
+        {{TAX_LINES_XML}}
+      </taxLines>
+      {{/if}}
+      <vat>
+        <vatCase>{{VAT_CASE}}</vatCase>
+        <taxRate>{{TAX_RATE}}</taxRate>
+        {{#if REVERSE_CHARGE_NOTE}}<reverseChargeNote>{{REVERSE_CHARGE_NOTE}}</reverseChargeNote>{{/if}}
+        {{#if INTRA_EU_NOTE}}<intraEUNote>{{INTRA_EU_NOTE}}</intraEUNote>{{/if}}
+      </vat>
+      {{#if PAYMENT_DATA}}
+      <payment>
+        {{#if BANK_ACCOUNT}}<bankAccount>{{BANK_ACCOUNT}}</bankAccount>{{/if}}
+        {{#if IBAN}}<iban>{{IBAN}}</iban>{{/if}}
+        {{#if BIC}}<bic>{{BIC}}</bic>{{/if}}
+        {{#if PAYMENT_TERMS_TEXT}}<paymentTermsText>{{PAYMENT_TERMS_TEXT}}</paymentTermsText>{{/if}}
+        {{#if PAYMENT_METHOD}}<paymentMethod>{{PAYMENT_METHOD}}</paymentMethod>{{/if}}
+        {{#if PAYMENT_CONDITION}}<paymentCondition>{{PAYMENT_CONDITION}}</paymentCondition>{{/if}}
+        {{#if SKONTO_PERCENT}}
+        <skonto>
+          <percentage>{{SKONTO_PERCENT}}</percentage>
+          <days>{{SKONTO_DAYS}}</days>
+        </skonto>
+        {{/if}}
+        {{#if PAYMENT_DEADLINE}}<paymentDeadline>{{PAYMENT_DEADLINE}}</paymentDeadline>{{/if}}
+        {{#if PAYMENT_REFERENCE}}<paymentReference>{{PAYMENT_REFERENCE}}</paymentReference>{{/if}}
+      </payment>
+      {{/if}}
+      <booking>
+        <creditorAccount>{{CREDITOR_ACCOUNT}}</creditorAccount>
+        <offsetAccount>{{OFFSET_ACCOUNT}}</offsetAccount>
+        {{#if POSTING_KEY}}<postingKey>{{POSTING_KEY}}</postingKey>{{/if}}
+        {{#if BOOKING_TEXT}}<bookingText>{{BOOKING_TEXT}}</bookingText>{{/if}}
+        {{#if OPOS_FLAG}}<oposFlag>{{OPOS_FLAG}}</oposFlag>{{/if}}
+        {{#if COST_CENTER}}<costCenter>{{COST_CENTER}}</costCenter>{{/if}}
+        {{#if COST_OBJECT}}<costObject>{{COST_OBJECT}}</costObject>{{/if}}
+      </booking>
+      <references>
+        <externalReference>{{EXTERNAL_REFERENCE}}</externalReference>
+        {{#if PURCHASE_ORDER_NUMBER}}<purchaseOrderNumber>{{PURCHASE_ORDER_NUMBER}}</purchaseOrderNumber>{{/if}}
+        {{#if DELIVERY_NOTE_NUMBER}}<deliveryNoteNumber>{{DELIVERY_NOTE_NUMBER}}</deliveryNoteNumber>{{/if}}
+        {{#if DOCUMENT_FIELD_1}}<documentField1>{{DOCUMENT_FIELD_1}}</documentField1>{{/if}}
+        {{#if DOCUMENT_FIELD_2}}<documentField2>{{DOCUMENT_FIELD_2}}</documentField2>{{/if}}
+      </references>
+      {{#if INTERNATIONAL_SECTION}}
+      <international>
+        <intraEUGoodsAcquisition>{{INTRA_EU_GOODS}}</intraEUGoodsAcquisition>
+        <euServiceReverseCharge>{{EU_SERVICE_RC}}</euServiceReverseCharge>
+        <nonEUImport>{{NON_EU_IMPORT}}</nonEUImport>
+      </international>
+      {{/if}}
+      {{#if INTERNAL_NOTE}}
+      <notes>
+        <internalNote>{{INTERNAL_NOTE}}</internalNote>
+      </notes>
+      {{/if}}
+    </document>
+  </content>
+</archive>
