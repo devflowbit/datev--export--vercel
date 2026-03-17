@@ -626,7 +626,7 @@ export class DatevXMLGeneratorService {
         // Order 28-30: Account & Payment Terms
         { order: 28, element: 'accountName', value: item.accountName }, // TODO: Mandetory add from LLM
         // { order: 29, element: 'paymentConditionsId', value: payment?.paymentConditionsId },
-        { order: 30, element: 'paymentOrder', value: isAlreadyPaid ? !isAlreadyPaid : null }, // Pass false if invoice is already paid, else skip this field
+        { order: 30, element: 'paymentOrder', value: !isAlreadyPaid }, // Pass false if invoice is already paid, else skip this field
 
         // Order 31-35: Discount fields (ONLY included if discount data exists)
         { order: 31, element: 'discountPercentage', value: discountData?.discountPercentage ? formatNumberForXml(discountData.discountPercentage, 2) : undefined },
