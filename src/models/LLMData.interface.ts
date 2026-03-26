@@ -108,7 +108,7 @@ export interface LineItemData {
   totalPrice?: LLMField<number>;
   vatRate?: LLMField<number>;
   vatAmount?: LLMField<number>;
-  Sachkonto?: LLMField<string>;
+  sachkonto?: LLMField<string>;
   BUSchluessel?: LLMField<string>;
   discount?: LLMField<number>;
   // Extended line item fields (all optional)

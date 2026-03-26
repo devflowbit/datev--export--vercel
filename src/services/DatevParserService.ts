@@ -384,7 +384,7 @@ export class DatevParserService {
       const totalPrice = this.extractFieldValue(item.totalPrice);
       const vatRate = this.extractFieldValue(item.vatRate);
       const vatAmount = this.extractFieldValue(item.vatAmount);
-      const sachkonto = this.extractFieldValue(item.Sachkonto);
+      const sachkonto = this.extractFieldValue(item.sachkonto);
       const buKey = this.extractFieldValue(item.BUSchluessel);
 
       // Extract extended line item fields (all optional)
@@ -443,11 +443,12 @@ export class DatevParserService {
         lineGrossAmount: grossAmount,
         buKey: buKey ? String(buKey) : undefined,
         suggestedGLAccount: sachkonto,
+        sachkonto,
         // Extended fields (only included if present)
         bookingText,
         information,
         costCenter,
-        costCategory,
+        costCategoryId: costCategory,
         costAmount: costAmount ? parseGermanNumber(costAmount) : undefined,
         typeOfReceivable,
         internalInvoiceId,
