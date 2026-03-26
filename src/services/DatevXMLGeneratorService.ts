@@ -561,8 +561,6 @@ export class DatevXMLGeneratorService {
       // Build ordered field list (Order 1-41 per DATEV schema)
       // Only fields with values will be included
 
-      const sachkonto = item.sachkonto.length < 4 ? item.sachkonto.padStart(4, "0") : item.sachkonto;
-
       const fields = [
         // Order 1-3: Core transaction
         { order: 1, element: 'date', value: formattedDate },
@@ -570,7 +568,7 @@ export class DatevXMLGeneratorService {
         { order: 3, element: 'discountAmount', value: discountAmount ? formatNumberForXml(discountAmount) : undefined },
 
         // Order 4-8: GL Account & Cost
-        { order: 4, element: 'accountNo', value: sachkonto }, // NO discount condition!
+        { order: 4, element: 'accountNo', value: item.sachkonto }, // NO discount condition!
         { order: 5, element: 'buCode', value: item.buKey }, // NO discount condition!
         // { order: 6, element: 'costAmount', value: item.costAmount ? formatNumberForXml(item.costAmount) : undefined },
         { order: 7, element: 'costCategoryId', value: item.costCategoryId },
