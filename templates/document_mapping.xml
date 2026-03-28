@@ -1,20 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <archive xmlns="http://xml.datev.de/bedi/tps/document/v06.0"
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://xml.datev.de/bedi/tps/document/v06.0 Document_v060.xsd" version="6.0" generatingSystem="{{GENERATING_SYSTEM}}">
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://xml.datev.de/bedi/tps/document/v06.0 Document_v060.xsd"
+         version="6.0"
+         generatingSystem="{{GENERATING_SYSTEM}}">
   <header>
     <date>{{EXPORT_DATE}}</date>
   </header>
   <content>
-    <document{{#if DOCUMENT_GUID}} guid="{{DOCUMENT_GUID}}" type="1"{{/if}}>
-<extension xsi:type="{{LEDGER_TYPE}}" datafile="{{XML_FILENAME}}">
-      <property value="{{INVOICE_MONTH}}" key="1"/>
-      <property value="{{DOCUMENT_TYPE_TEXT}}" key="3"/>
-    </extension>
-    <extension xsi:type="File" name="{{PDF_FILENAME}}"/>
-    <repository>
-      <level id="1" name="Belegführung"/>
-      <level id="2" name="{{REPOSITORY_LEVEL_NAME}}"/>
-    </repository>
-  </document>
-</content>
+    <document{{#if DOCUMENT_GUID}} guid="{{DOCUMENT_GUID}}"{{/if}}>
+      <extension xsi:type="{{LEDGER_TYPE}}" datafile="{{XML_FILENAME}}">
+        <property value="{{INVOICE_MONTH}}" key="1"/>
+        <property value="{{DOCUMENT_TYPE_TEXT}}" key="3"/>
+      </extension>
+      <extension xsi:type="File" name="{{PDF_FILENAME}}"/>
+    </document>
+  </content>
 </archive>

@@ -108,10 +108,11 @@ export interface LineItem {
   lineGrossAmount?: number; // NEW v6.0: Gross amount (calculated)
   buKey?: string; // BU-Schlüssel (Order 5) - optional now, not always present
   suggestedGLAccount?: string; // SachkontoVorschlag (Order 4) - maps to accountNo in XML
+  sachkonto?: string;
   bookingText?: string; // NEW v6.0: Posting description (Order 13)
   information?: string; // Document summary
   costCenter?: string; // Cost center (Order 7) - costCategoryId in XML
-  costCategory?: string; // Cost category (Order 8) - costCategoryId2 in XML
+  costCategoryId?: string; // Cost category (Order 8) - costCategoryId2 in XML
   costObject?: string; // NEW v6.0: Cost object/project (optional)
   deliveryDate?: string; // NEW: Line-specific delivery/service date (Order 38) - YYYY-MM-DD
   // Extended line item fields (all optional)
