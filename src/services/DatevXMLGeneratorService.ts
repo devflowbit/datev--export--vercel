@@ -619,7 +619,7 @@ export class DatevXMLGeneratorService {
         // { order: 35, element: 'discountPaymentDate2', value: discountData?.discountPaymentDate2 ? formatDateForDatev(discountData.discountPaymentDate2) : undefined },
 
         // Order 36-41: Due Date & References (CORRECTED ORDER per DATEV schema)
-        { order: 36, element: 'dueDate', value: formattedDueDate },
+        { order: 36, element: 'dueDate', value: !hasPaymentConditionsId ? formattedDueDate : null },
         { order: 37, element: 'bpAccountNo', value: (supplier?.vendorPartyNumber || bpAccountNo).replace(/[^a-zA-Z0-9]/g, "") }, // MOVED: Must come BEFORE deliveryDate per DATEV schema
         { order: 38, element: 'deliveryDate', value: lineDeliveryDate }, // Line-specific or fallback delivery date
         { order: 39, element: 'orderId', value: orderId },
