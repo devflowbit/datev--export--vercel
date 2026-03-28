@@ -558,6 +558,10 @@ export class DatevXMLGeneratorService {
         ? formatDateForDatev(item.deliveryDate)
         : consolidatedDateForLines; // Will be undefined if no consolidated date
 
+      // When paymentConditionsId is present, DATEV derives payment terms from master data
+      // So we skip paidAt, paymentOrder, and all discount-related fields
+      const hasPaymentConditionsId = !!payment?.paymentConditionsId;
+
       // Build ordered field list (Order 1-41 per DATEV schema)
       // Only fields with values will be included
 
@@ -565,7 +569,7 @@ export class DatevXMLGeneratorService {
         // Order 1-3: Core transaction
         { order: 1, element: 'date', value: formattedDate },
         { order: 2, element: 'amount', value: formatNumberForXml(lineGross) },
-        { order: 3, element: 'discountAmount', value: discountAmount ? formatNumberForXml(discountAmount) : undefined },
+        { order: 3, element: 'discountAmount', value: (!hasPaymentConditionsId && discountAmount) ? formatNumberForXml(discountAmount) : undefined },
 
         // Order 4-8: GL Account & Cost
         { order: 4, element: 'accountNo', value: item.sachkonto }, // NO discount condition!
@@ -586,7 +590,7 @@ export class DatevXMLGeneratorService {
         { order: 15, element: 'ownVatId', value: ownVatId },
         { order: 16, element: 'shipFromCountry', value: supplier?.country },
         // { order: 17, element: 'partyId', value: (supplier?.vendorPartyNumber || bpAccountNo).replace(/[^a-zA-Z0-9]/g, "") }, // Use internalId for outgoing
-        { order: 18, element: 'paidAt', value: isAlreadyPaid ? paidAt : null },
+        { order: 18, element: 'paidAt', value: (!hasPaymentConditionsId && isAlreadyPaid) ? paidAt : null },
         // { order: 19, element: 'internalInvoiceId', value: item.internalInvoiceId },
         { order: 20, element: 'vatId', value: supplier?.vatId }, // NO discount condition!
         { order: 21, element: 'shipToCountry', value: shipToCountry },
@@ -605,11 +609,11 @@ export class DatevXMLGeneratorService {
         // Order 28-30: Account & Payment Terms
         { order: 28, element: 'accountName', value: item.accountName }, // TODO: Mandetory add from LLM
         { order: 29, element: 'paymentConditionsId', value: payment?.paymentConditionsId },
-        { order: 30, element: 'paymentOrder', value: isAlreadyPaid ? !isAlreadyPaid : null }, // Pass false if invoice is already paid, else skip this field
+        { order: 30, element: 'paymentOrder', value: (!hasPaymentConditionsId && isAlreadyPaid) ? !isAlreadyPaid : null }, // Pass false if invoice is already paid, else skip this field
 
         // Order 31-35: Discount fields (ONLY included if discount data exists)
-        { order: 31, element: 'discountPercentage', value: discountData?.discountPercentage ? formatNumberForXml(discountData.discountPercentage, 2) : undefined },
-        { order: 32, element: 'discountPaymentDate', value: discountData?.discountDueDate ? formatDateForDatev(discountData.discountDueDate) : undefined },
+        { order: 31, element: 'discountPercentage', value: (!hasPaymentConditionsId && discountData?.discountPercentage) ? formatNumberForXml(discountData.discountPercentage, 2) : undefined },
+        { order: 32, element: 'discountPaymentDate', value: (!hasPaymentConditionsId && discountData?.discountDueDate) ? formatDateForDatev(discountData.discountDueDate) : undefined },
         // { order: 33, element: 'discountAmount2', value: discountData?.discountAmount2 ? formatNumberForXml(discountData.discountAmount2) : undefined },
         // { order: 34, element: 'discountPercentage2', value: discountData?.discountPercentage2 ? formatNumberForXml(discountData.discountPercentage2, 2) : undefined },
         // { order: 35, element: 'discountPaymentDate2', value: discountData?.discountPaymentDate2 ? formatDateForDatev(discountData.discountPaymentDate2) : undefined },
