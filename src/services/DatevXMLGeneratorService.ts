@@ -590,7 +590,7 @@ export class DatevXMLGeneratorService {
         { order: 15, element: 'ownVatId', value: ownVatId },
         { order: 16, element: 'shipFromCountry', value: supplier?.country },
         // { order: 17, element: 'partyId', value: (supplier?.vendorPartyNumber || bpAccountNo).replace(/[^a-zA-Z0-9]/g, "") }, // Use internalId for outgoing
-        { order: 18, element: 'paidAt', value: (!hasPaymentConditionsId && isAlreadyPaid) ? paidAt : null },
+        { order: 18, element: 'paidAt', value: (!hasPaymentConditionsId && isAlreadyPaid) ? formatDateForDatev(paidAt) : null },
         // { order: 19, element: 'internalInvoiceId', value: item.internalInvoiceId },
         { order: 20, element: 'vatId', value: supplier?.vatId }, // NO discount condition!
         { order: 21, element: 'shipToCountry', value: shipToCountry },
