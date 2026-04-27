@@ -590,7 +590,7 @@ export class DatevXMLGeneratorService {
         { order: 15, element: 'ownVatId', value: ownVatId },
         { order: 16, element: 'shipFromCountry', value: supplier?.country },
         // { order: 17, element: 'partyId', value: (supplier?.vendorPartyNumber || bpAccountNo).replace(/[^a-zA-Z0-9]/g, "") }, // Use internalId for outgoing
-        { order: 18, element: 'paidAt', value: (!hasPaymentConditionsId && isAlreadyPaid) ? paidAt : null },
+        { order: 18, element: 'paidAt', value: (!hasPaymentConditionsId && isAlreadyPaid) ? formatDateForDatev(paidAt) : null },
         // { order: 19, element: 'internalInvoiceId', value: item.internalInvoiceId },
         { order: 20, element: 'vatId', value: supplier?.vatId }, // NO discount condition!
         { order: 21, element: 'shipToCountry', value: shipToCountry },
@@ -603,7 +603,14 @@ export class DatevXMLGeneratorService {
         // Order 23-25: REMOVED - Legacy banking fields (bankCode, bankAccount, bankCountry)
         // DATEV Error: "Elemente bankCode/bankAccount entsprechen nicht der Spezifikation"
         // Solution: Use modern IBAN + BIC standard only
-        { order: 26, element: 'iban', value: (iban || payment?.iban || supplier?.iban).replace(/ /g, "") },
+        (() => {
+          const rawIban = iban || payment?.iban || supplier?.iban;
+          if (!rawIban) {
+            console.warn(`[DATEV] Skipping iban for invoice ${invoiceId}: no IBAN found on payment or supplier`);
+            return { order: 26, element: 'iban', value: undefined };
+          }
+          return { order: 26, element: 'iban', value: rawIban.replace(/ /g, "") };
+        })(),
         // { order: 27, element: 'swiftCode', value: payment?.swiftCode || supplier?.swiftCode },
 
         // Order 28-30: Account & Payment Terms
@@ -619,8 +626,15 @@ export class DatevXMLGeneratorService {
         // { order: 35, element: 'discountPaymentDate2', value: discountData?.discountPaymentDate2 ? formatDateForDatev(discountData.discountPaymentDate2) : undefined },
 
         // Order 36-41: Due Date & References (CORRECTED ORDER per DATEV schema)
-        { order: 36, element: 'dueDate', value: !hasPaymentConditionsId ? formattedDueDate : null },
-        { order: 37, element: 'bpAccountNo', value: (supplier?.vendorPartyNumber || bpAccountNo).replace(/[^a-zA-Z0-9]/g, "") }, // MOVED: Must come BEFORE deliveryDate per DATEV schema
+        { order: 36, element: 'dueDate', value: formattedDueDate },
+        (() => {
+          const rawBpAccount = supplier?.vendorPartyNumber || bpAccountNo;
+          if (!rawBpAccount) {
+            console.warn(`[DATEV] Skipping bpAccountNo for invoice ${invoiceId}: no vendorPartyNumber or bpAccountNo provided`);
+            return { order: 37, element: 'bpAccountNo', value: undefined };
+          }
+          return { order: 37, element: 'bpAccountNo', value: rawBpAccount.replace(/[^a-zA-Z0-9]/g, "") };
+        })(), // MOVED: Must come BEFORE deliveryDate per DATEV schema
         { order: 38, element: 'deliveryDate', value: lineDeliveryDate }, // Line-specific or fallback delivery date
         { order: 39, element: 'orderId', value: orderId },
         // { order: 40, element: "paidAt", value: paidAt },
