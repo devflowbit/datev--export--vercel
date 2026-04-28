@@ -472,6 +472,79 @@ export class DatevXMLGeneratorService {
     return taxLinesXML.join('\n');
   }
 
+  private consolidateLineItems(lineItems: LineItem[]): LineItem[] {
+    const buckets = new Map<string, LineItem[]>();
+
+    lineItems.forEach((item, idx) => {
+      const hasKey = item.sachkonto && item.buKey;
+      const key = hasKey
+        ? `acct::${item.sachkonto}::bu::${item.buKey}`
+        : `__solo__${idx}`;
+
+      if (!buckets.has(key)) buckets.set(key, []);
+      buckets.get(key)!.push(item);
+    });
+
+    const result: LineItem[] = [];
+
+    for (const [, group] of buckets) {
+      if (group.length === 1) {
+        result.push({ ...group[0] });
+        continue;
+      }
+
+      const lineNetAmount = group.reduce((s, i) => s + (i.lineNetAmount ?? 0), 0);
+      const lineTaxAmount = group.reduce((s, i) => s + (i.lineTaxAmount ?? 0), 0);
+      const lineGrossAmount = group.reduce(
+        (s, i) => s + (i.lineGrossAmount ?? (i.lineNetAmount + (i.lineTaxAmount ?? 0))),
+        0
+      );
+
+      const uniqueDescriptions = [...new Set(group.map(i => i.description).filter(Boolean))];
+      const description = uniqueDescriptions.join('; ');
+
+      const datesPresent = group.map(i => i.deliveryDate).filter(d => d != null && d !== '');
+      const allHaveDate = datesPresent.length === group.length;
+      const allSameDate = allHaveDate && datesPresent.every(d => d === datesPresent[0]);
+      const deliveryDate = allSameDate ? datesPresent[0] : undefined;
+
+      result.push({
+        ...group[0],
+        description,
+        lineNetAmount,
+        lineTaxAmount,
+        lineGrossAmount,
+        deliveryDate,
+        quantity: undefined,
+        unitPriceNet: 0,
+      });
+    }
+
+    return result;
+  }
+
+  private calculateItemDiscount(
+    itemGrossAmount: number,
+    totalGrossAmount: number,
+    discountData?: {
+      discountPercentage?: number;
+      discountedTotal?: number;
+    }
+  ): number | undefined {
+    if (!discountData || !totalGrossAmount || totalGrossAmount === 0) return undefined;
+
+    if (discountData.discountPercentage != null && discountData.discountPercentage > 0) {
+      return Math.round(itemGrossAmount * (discountData.discountPercentage / 100) * 100) / 100;
+    }
+
+    if (discountData.discountedTotal != null && discountData.discountedTotal > 0) {
+      const totalDiscountAmount = totalGrossAmount - discountData.discountedTotal;
+      return Math.round(totalDiscountAmount * (itemGrossAmount / totalGrossAmount) * 100) / 100;
+    }
+
+    return undefined;
+  }
+
   /**
    * Generate Ledger Line Items XML (accountsPayableLedger elements) - DATA-DRIVEN APPROACH
    * Uses DATEV Ledger Import schema structure - flat format
@@ -528,15 +601,16 @@ export class DatevXMLGeneratorService {
       return hasPercentage || hasPercentage2 || hasAmount2 || hasDiscountedTotal;
     };
 
-    // Calculate discount amount ONLY if discount percentage is valid (non-zero)
-    const grossTotal = lineItems.reduce((sum, item) =>
-      sum + (item.lineGrossAmount || (item.lineNetAmount + (item.lineTaxAmount || 0))), 0);
-
-    // Only calculate discount if there's a valid (non-zero) percentage
     const hasValidDiscount = hasValidDiscountData(discountData);
-    const discountAmount = (hasValidDiscount && discountData?.discountPercentage && discountData.discountPercentage > 0)
-      ? (grossTotal * discountData.discountPercentage / 100)
-      : undefined;
+
+    // Step 1: Consolidate line items by sachkonto + buKey
+    const consolidatedItems = this.consolidateLineItems(lineItems);
+
+    console.log(`[DATEV] Consolidation: ${lineItems.length} raw line(s) → ${consolidatedItems.length} ledger element(s)`);
+
+    // Step 2: Total gross from consolidated items (used as discount ratio base)
+    const grossTotal = consolidatedItems.reduce((sum, item) =>
+      sum + (item.lineGrossAmount || (item.lineNetAmount + (item.lineTaxAmount || 0))), 0);
 
     // Determine ledger element name and party field names based on document direction
     // Credit notes behave like incoming invoices (accounts payable)
@@ -548,8 +622,13 @@ export class DatevXMLGeneratorService {
     // Get booking text prefix based on direction
     // Generate one ledger element per line item
     // Filter items to remove the items with 0 amount
-    const ledgerElements = lineItems.filter((item) => item.lineNetAmount !== 0).map(item => {
+    const ledgerElements = consolidatedItems.filter((item) => item.lineNetAmount !== 0).map(item => {
       const lineGross = item.lineGrossAmount || (item.lineNetAmount + (item.lineTaxAmount || 0));
+
+      // Step 3: Per-item proportional discount amount
+      const itemDiscountAmount = hasValidDiscount
+        ? this.calculateItemDiscount(lineGross, grossTotal, discountData)
+        : undefined;
 
       // Use line-specific deliveryDate if present
       // CRITICAL: If consolidatedDeliveryDate is set, consolidatedDateForLines ensures matching
@@ -569,7 +648,7 @@ export class DatevXMLGeneratorService {
         // Order 1-3: Core transaction
         { order: 1, element: 'date', value: formattedDate },
         { order: 2, element: 'amount', value: formatNumberForXml(lineGross) },
-        { order: 3, element: 'discountAmount', value: (!hasPaymentConditionsId && discountAmount) ? formatNumberForXml(discountAmount) : undefined },
+        { order: 3, element: 'discountAmount', value: (!hasPaymentConditionsId && itemDiscountAmount) ? formatNumberForXml(itemDiscountAmount) : undefined },
 
         // Order 4-8: GL Account & Cost
         { order: 4, element: 'accountNo', value: item.sachkonto }, // NO discount condition!
