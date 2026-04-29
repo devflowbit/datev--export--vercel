@@ -725,7 +725,7 @@ export class DatevXMLGeneratorService {
 
         // Order 14-21: Party, VAT & Shipping
         // { order: 14, element: 'typeOfReceivable', value: item.typeOfReceivable },
-        { order: 15, element: 'ownVatId', value: ownVatId },
+        // { order: 15, element: 'ownVatId', value: ownVatId },
         { order: 16, element: 'shipFromCountry', value: supplier?.country },
         // { order: 17, element: 'partyId', value: (supplier?.vendorPartyNumber || bpAccountNo).replace(/[^a-zA-Z0-9]/g, "") }, // Use internalId for outgoing
         { order: 18, element: 'paidAt', value: (!hasPaymentConditionsId && isAlreadyPaid) ? formatDateForDatev(paidAt) : null },
