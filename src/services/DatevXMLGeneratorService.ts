@@ -18,6 +18,16 @@ import {
   extractSkonto
 } from '../utils/datevCalculations';
 
+// Currency arithmetic in integer cents avoids float drift (0.1 + 0.2 ≠ 0.3) that
+// would otherwise break the DATEV invariant: consolidatedAmount == Σ ledger amounts.
+const toCents = (n: number | undefined | null): number =>
+  Math.round(((typeof n === 'number' && !isNaN(n)) ? n : 0) * 100);
+const fromCents = (c: number): number => c / 100;
+const grossCentsOf = (item: LineItem): number =>
+  item.lineGrossAmount != null
+    ? toCents(item.lineGrossAmount)
+    : toCents(item.lineNetAmount) + toCents(item.lineTaxAmount);
+
 export class DatevXMLGeneratorService {
   private templateCache: Map<string, string> = new Map();
 
@@ -42,13 +52,15 @@ export class DatevXMLGeneratorService {
     const effectiveSupplier = xmlSupplier || datevDoc.supplier;
     const effectiveCustomer = xmlCustomer;
 
-    // CRITICAL: Calculate consolidatedAmount from line items to ensure mathematical consistency
-    // DATEV validates that consolidatedAmount EXACTLY equals sum of all line item amounts
-    // Using LLM-extracted total can cause rounding mismatches
-    const consolidatedAmount = datevDoc.lineItems.reduce((sum, item) => {
-      const lineGross = item.lineGrossAmount || (item.lineNetAmount + (item.lineTaxAmount || 0));
-      return sum + lineGross;
-    }, 0);
+    // Consolidate ONCE here so the consolidatedAmount and the ledger row amounts come
+    // from the exact same array with the exact same arithmetic. The DATEV XSD invariant
+    // (consolidatedAmount == Σ ledger amounts) then holds bit-for-bit.
+    const consolidatedItems = this.consolidateLineItems(datevDoc.lineItems);
+
+    // Sum in integer cents to avoid float drift across the ledger row amounts.
+    const consolidatedAmount = fromCents(
+      consolidatedItems.reduce((s, i) => s + grossCentsOf(i), 0)
+    );
 
     // Determine delivery date strategy:
     // RULES:
@@ -81,8 +93,9 @@ export class DatevXMLGeneratorService {
     // Generate ledger line items XML (accountsPayableLedger elements)
     // Pass consolidatedDeliveryDate only if set (ensures per-line dates match when both present)
     // NEVER pass serviceDate - deliveryDate is definitive!
+    // Pass already-consolidated items so amounts here and the ledger XML stay in lockstep.
     const lineItemsXML = this.generateLedgerLineItemsXML(
-      datevDoc.lineItems,
+      consolidatedItems,
       datevDoc.documentDate,
       datevDoc.documentNumber,
       datevDoc.currency,
@@ -110,23 +123,20 @@ export class DatevXMLGeneratorService {
       datevDoc.orderId
     );
 
-    // Helper for safe toFixed in logging
-    const safeToFixed = (val: number | undefined | null, decimals: number = 2): string => {
-      return typeof val === 'number' && !isNaN(val) ? val.toFixed(decimals) : '0.00';
-    };
+    // Validation logging (development only — verbose, runs per export on a hot path)
+    if (process.env.NODE_ENV !== 'production') {
+      const safeToFixed = (val: number | undefined | null, decimals: number = 2): string =>
+        typeof val === 'number' && !isNaN(val) ? val.toFixed(decimals) : '0.00';
 
-    // Validation logging
-    console.log(`[DATEV VALIDATION] Consolidated Amount: ${safeToFixed(consolidatedAmount)}`);
-    console.log(`[DATEV VALIDATION] Line Items Count: ${datevDoc.lineItems.length}`);
-    datevDoc.lineItems.forEach((item, idx) => {
-      const
-        gross = item.lineGrossAmount || (item.lineNetAmount + (item.lineTaxAmount || 0));
-      console.log(`[DATEV VALIDATION] Line ${idx + 1}: ${safeToFixed(gross)}`);
-    });
-    const calculatedSum = datevDoc.lineItems.reduce((s, i) =>
-      s + (i.lineGrossAmount || (i.lineNetAmount + (i.lineTaxAmount || 0))), 0);
-    console.log(`[DATEV VALIDATION] Sum Verification: ${safeToFixed(calculatedSum)}`);
-    console.log(`[DATEV VALIDATION] Match: ${Math.abs(calculatedSum - consolidatedAmount) < 0.001 ? '✓ PASS' : '✗ FAIL'}`);
+      console.log(`[DATEV VALIDATION] Consolidated Amount: ${safeToFixed(consolidatedAmount)}`);
+      console.log(`[DATEV VALIDATION] Line Items Count: ${datevDoc.lineItems.length} → ${consolidatedItems.length} consolidated`);
+      consolidatedItems.forEach((item, idx) => {
+        console.log(`[DATEV VALIDATION] Line ${idx + 1}: ${safeToFixed(fromCents(grossCentsOf(item)))}`);
+      });
+      const calculatedSum = fromCents(consolidatedItems.reduce((s, i) => s + grossCentsOf(i), 0));
+      console.log(`[DATEV VALIDATION] Sum Verification: ${safeToFixed(calculatedSum)}`);
+      console.log(`[DATEV VALIDATION] Match: ${calculatedSum === consolidatedAmount ? '✓ PASS' : '✗ FAIL'}`);
+    }
 
     // Prepare placeholders for ledger import
     const placeholders: Record<string, any> = {
@@ -472,13 +482,127 @@ export class DatevXMLGeneratorService {
     return taxLinesXML.join('\n');
   }
 
+  private consolidateLineItems(lineItems: LineItem[]): LineItem[] {
+    // Drop fully-zero raw items up front so they cannot bias bucketing or descriptions.
+    const meaningful = lineItems.filter(
+      i => (i.lineNetAmount ?? 0) !== 0 || (i.lineGrossAmount ?? 0) !== 0
+    );
+
+    const buckets = new Map<string, LineItem[]>();
+
+    meaningful.forEach((item, idx) => {
+      // vatRate is part of the key: items sharing GL account + BU key but with different
+      // VAT rates must stay in separate ledger rows (the consolidated row's vatRate is
+      // inherited from group[0] and would silently misreport the others' tax).
+      const hasKey = item.sachkonto && item.buKey;
+      const key = hasKey
+        ? `acct::${item.sachkonto}::bu::${item.buKey}::vat::${item.vatRate ?? 'na'}`
+        : `__solo__${idx}`;
+
+      if (!buckets.has(key)) buckets.set(key, []);
+      buckets.get(key)!.push(item);
+    });
+
+    // Bound merged text values by the same DATEV field limits used downstream
+    // (information → 120, bookingText → 30). When the joined value would exceed
+    // the cap, fall back to a generic German label rather than a mid-word cut.
+    const mergeWithCap = (
+      values: (string | undefined)[],
+      max: number,
+      fallback: string
+    ): string | undefined => {
+      const unique = [...new Set(values.filter((v): v is string => !!v && v.trim() !== ''))];
+      if (unique.length === 0) return undefined;
+      const joined = unique.join('; ');
+      return joined.length <= max ? joined : fallback;
+    };
+
+    const result: LineItem[] = [];
+
+    for (const [, group] of buckets) {
+      if (group.length === 1) {
+        result.push({ ...group[0] });
+        continue;
+      }
+
+      const lineNetAmount = fromCents(group.reduce((s, i) => s + toCents(i.lineNetAmount), 0));
+      const lineTaxAmount = fromCents(group.reduce((s, i) => s + toCents(i.lineTaxAmount), 0));
+      const lineGrossAmount = fromCents(group.reduce((s, i) => s + grossCentsOf(i), 0));
+
+      const groupFallback = `Sammelposition (${group.length} Positionen)`;
+      const description = mergeWithCap(group.map(i => i.description), 120, groupFallback) ?? '';
+      const bookingText = mergeWithCap(group.map(i => i.bookingText), 30, 'Sammelposition');
+      const information = mergeWithCap(group.map(i => i.information), 120, groupFallback);
+
+      const datesPresent = group.map(i => i.deliveryDate).filter(d => d != null && d !== '');
+      const allHaveDate = datesPresent.length === group.length;
+      const allSameDate = allHaveDate && datesPresent.every(d => d === datesPresent[0]);
+      const deliveryDate = allSameDate ? datesPresent[0] : undefined;
+
+      result.push({
+        ...group[0],
+        description,
+        bookingText,
+        information,
+        lineNetAmount,
+        lineTaxAmount,
+        lineGrossAmount,
+        deliveryDate,
+        quantity: undefined,
+        unitPriceNet: undefined,
+      });
+    }
+
+    return result;
+  }
+
+  // Distribute a single total discount across items proportionally to gross amount, in cents.
+  // The remainder from rounding is absorbed by the last item so Σ(itemDiscount) == totalDiscount
+  // exactly — independent per-item rounding (the previous approach) could drift by ±1 cent
+  // per item and break DATEV cross-checks against the booked discount total.
+  private distributeDiscount(
+    itemGrossCents: number[],
+    grossTotalCents: number,
+    discountData?: {
+      discountPercentage?: number;
+      discountedTotal?: number;
+    }
+  ): number[] | undefined {
+    if (!discountData || grossTotalCents <= 0 || itemGrossCents.length === 0) return undefined;
+
+    let totalDiscountCents: number;
+    if (discountData.discountPercentage != null && discountData.discountPercentage > 0) {
+      totalDiscountCents = Math.round(grossTotalCents * discountData.discountPercentage / 100);
+    } else if (discountData.discountedTotal != null && discountData.discountedTotal > 0) {
+      totalDiscountCents = grossTotalCents - toCents(discountData.discountedTotal);
+    } else {
+      return undefined;
+    }
+
+    if (totalDiscountCents <= 0) return undefined;
+
+    const out: number[] = new Array(itemGrossCents.length);
+    let assigned = 0;
+    for (let i = 0; i < itemGrossCents.length - 1; i++) {
+      const portion = Math.round(totalDiscountCents * itemGrossCents[i] / grossTotalCents);
+      out[i] = portion;
+      assigned += portion;
+    }
+    out[itemGrossCents.length - 1] = totalDiscountCents - assigned;
+    return out;
+  }
+
   /**
    * Generate Ledger Line Items XML (accountsPayableLedger elements) - DATA-DRIVEN APPROACH
    * Uses DATEV Ledger Import schema structure - flat format
    * Fields are included ONLY if they have values (no illogical discount-based conditionals)
+   *
+   * NOTE: caller must pass already-consolidated items (see consolidateLineItems). The
+   * caller's consolidatedAmount and the ledger row amounts are then computed from the
+   * same array, preserving the DATEV invariant: consolidatedAmount == Σ ledger amounts.
    */
   private generateLedgerLineItemsXML(
-    lineItems: LineItem[],
+    consolidatedItems: LineItem[],
     documentDate: string,
     invoiceId: string,
     currency: string,
@@ -506,7 +630,7 @@ export class DatevXMLGeneratorService {
     orderId?: string
   ): string {
 
-    if (!lineItems || lineItems.length === 0) {
+    if (!consolidatedItems || consolidatedItems.length === 0) {
       return '';
     }
 
@@ -528,14 +652,25 @@ export class DatevXMLGeneratorService {
       return hasPercentage || hasPercentage2 || hasAmount2 || hasDiscountedTotal;
     };
 
-    // Calculate discount amount ONLY if discount percentage is valid (non-zero)
-    const grossTotal = lineItems.reduce((sum, item) =>
-      sum + (item.lineGrossAmount || (item.lineNetAmount + (item.lineTaxAmount || 0))), 0);
-
-    // Only calculate discount if there's a valid (non-zero) percentage
     const hasValidDiscount = hasValidDiscountData(discountData);
-    const discountAmount = (hasValidDiscount && discountData?.discountPercentage && discountData.discountPercentage > 0)
-      ? (grossTotal * discountData.discountPercentage / 100)
+
+    // A bucket of [+100, -100] (e.g. correction + original) consolidates to zero and would
+    // be silently dropped below. Surface it so the operator can spot it in the export logs.
+    const zeroNetBuckets = consolidatedItems.filter(i => (i.lineNetAmount ?? 0) === 0);
+    if (zeroNetBuckets.length > 0) {
+      console.warn(`[DATEV] ${zeroNetBuckets.length} consolidated bucket(s) net to zero — dropped from ledger output. Inspect raw items for offsetting corrections.`);
+    }
+    const emittedItems = consolidatedItems.filter(i => (i.lineNetAmount ?? 0) !== 0);
+
+    // Cents-based gross totals (drives the discount distribution; same source the caller
+    // used to compute consolidatedAmount, so amounts cannot drift apart).
+    const itemGrossCentsList = emittedItems.map(i => grossCentsOf(i));
+    const grossTotalCents = itemGrossCentsList.reduce((s, c) => s + c, 0);
+
+    // Single-shot discount distribution: total computed once, remainder absorbed by the
+    // last item so the per-item discounts sum to the total exactly (no rounding drift).
+    const itemDiscountCentsList = hasValidDiscount
+      ? this.distributeDiscount(itemGrossCentsList, grossTotalCents, discountData)
       : undefined;
 
     // Determine ledger element name and party field names based on document direction
@@ -545,11 +680,14 @@ export class DatevXMLGeneratorService {
     const partyNameField = effectiveDirection === 'incoming' ? 'supplierName' : 'customerName';
     const partyCityField = effectiveDirection === 'incoming' ? 'supplierCity' : 'customerCity';
 
-    // Get booking text prefix based on direction
-    // Generate one ledger element per line item
-    // Filter items to remove the items with 0 amount
-    const ledgerElements = lineItems.filter((item) => item.lineNetAmount !== 0).map(item => {
-      const lineGross = item.lineGrossAmount || (item.lineNetAmount + (item.lineTaxAmount || 0));
+    // Generate one ledger element per consolidated item (zero-net buckets already filtered).
+    const ledgerElements = emittedItems.map((item, idx) => {
+      const lineGross = fromCents(itemGrossCentsList[idx]);
+
+      const itemDiscountCents = itemDiscountCentsList?.[idx];
+      const itemDiscountAmount = (itemDiscountCents != null && itemDiscountCents > 0)
+        ? fromCents(itemDiscountCents)
+        : undefined;
 
       // Use line-specific deliveryDate if present
       // CRITICAL: If consolidatedDeliveryDate is set, consolidatedDateForLines ensures matching
@@ -569,7 +707,7 @@ export class DatevXMLGeneratorService {
         // Order 1-3: Core transaction
         { order: 1, element: 'date', value: formattedDate },
         { order: 2, element: 'amount', value: formatNumberForXml(lineGross) },
-        { order: 3, element: 'discountAmount', value: (!hasPaymentConditionsId && discountAmount) ? formatNumberForXml(discountAmount) : undefined },
+        { order: 3, element: 'discountAmount', value: (!hasPaymentConditionsId && itemDiscountAmount) ? formatNumberForXml(itemDiscountAmount) : undefined },
 
         // Order 4-8: GL Account & Cost
         { order: 4, element: 'accountNo', value: item.sachkonto }, // NO discount condition!
@@ -587,7 +725,7 @@ export class DatevXMLGeneratorService {
 
         // Order 14-21: Party, VAT & Shipping
         // { order: 14, element: 'typeOfReceivable', value: item.typeOfReceivable },
-        { order: 15, element: 'ownVatId', value: ownVatId },
+        // { order: 15, element: 'ownVatId', value: ownVatId },
         { order: 16, element: 'shipFromCountry', value: supplier?.country },
         // { order: 17, element: 'partyId', value: (supplier?.vendorPartyNumber || bpAccountNo).replace(/[^a-zA-Z0-9]/g, "") }, // Use internalId for outgoing
         { order: 18, element: 'paidAt', value: (!hasPaymentConditionsId && isAlreadyPaid) ? formatDateForDatev(paidAt) : null },

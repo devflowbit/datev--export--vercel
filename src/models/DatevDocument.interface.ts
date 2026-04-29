@@ -101,7 +101,7 @@ export interface LineItem {
   articleNumber?: string; // NEW v6.0: SKU/product code (optional)
   quantity?: number; // Menge (optional)
   unit?: string; // Einheit (optional)
-  unitPriceNet: number; // EinzelpreisNetto (required)
+  unitPriceNet?: number; // EinzelpreisNetto (optional: undefined on consolidated rows where it is meaningless)
   lineNetAmount: number; // PositionsNetto (required)
   vatRate: number; // PositionsSteuersatz (required)
   lineTaxAmount?: number; // PositionsSteuerbetrag (conditional)
